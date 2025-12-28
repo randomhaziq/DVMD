@@ -5,6 +5,8 @@ $role = $_SESSION['user_role'] ?? 'citizen';
 // Get current page from session (set in dashboard.php)
 $currentPage = $_SESSION['current_page'] ?? 'dashboard';
 
+$navItems = []; // Add this line at the top 
+
 // Define navigation based on role
 if ($role === 'citizen') {
     $navItems = [
@@ -22,49 +24,38 @@ if ($role === 'citizen') {
         ],
         [
             'title' => 'Report Incident',
-            'url' => 'dashboard.php?page=reports',
+            'url' => 'dashboard.php?page=submit_reports',
             'icon' => 'fas fa-flag',
             'badge' => null
         ],
-        [
-            'title' => 'Profile',
-            'url' => 'dashboard.php?page=profile',
-            'icon' => 'fas fa-user',
-            'badge' => null
-        ]
     ];
-} elseif ($role === 'ketua kampung') {
+} elseif ($role === 'ketua_kampung' || $role === 'penghulu') {
     $navItems = [
         [
-            'title' => 'Dashboard',
+            'title' => 'Dashboard', 
             'url' => 'dashboard.php?page=dashboard',
-            'icon' => 'fas fa-home',
+            'icon' => 'fas fa-tachometer-alt',
             'badge' => null
         ],
         [
-            'title' => 'Incident Management',
-            'url' => 'dashboard.php?page=incidents',
-            'icon' => 'fas fa-exclamation-triangle',
-            'badge' => '5'
+            // COMBINED: View Incidents + Assign Resources here
+            'title' => 'Incident Response', 
+            'url' => 'dashboard.php?page=manage_incidents',
+            'icon' => 'fas fa-map-marked-alt',
+            'badge' => null 
         ],
         [
-            'title' => 'Reports',
-            'url' => 'dashboard.php?page=reports',
-            'icon' => 'fas fa-file-alt',
-            'badge' => null
+            'title' => 'Manage Reports', 
+            'url' => 'dashboard.php?page=manage_reports',
+            'icon' => 'fas fa-clipboard-check', 
+            'badge' => '3' 
         ],
         [
-            'title' => 'Villager Management',
-            'url' => 'dashboard.php?page=villagers',
-            'icon' => 'fas fa-users',
+            'title' => 'Emergency Alerts', 
+            'url' => 'dashboard.php?page=emergency_alerts',
+            'icon' => 'fas fa-bullhorn',
             'badge' => null
         ],
-        [
-            'title' => 'Profile',
-            'url' => 'dashboard.php?page=profile',
-            'icon' => 'fas fa-user',
-            'badge' => null
-        ]
     ];
 } elseif ($role === 'district') {
     // Default for other roles
@@ -72,29 +63,85 @@ if ($role === 'citizen') {
         [
             'title' => 'Dashboard',
             'url' => 'dashboard.php?page=dashboard',
-            'icon' => 'fas fa-tachometer-alt',  // Better icon for dashboard
+            'icon' => 'fas fa-tachometer-alt',
             'badge' => null
         ],
         [
-            'title' => 'Manage Incidents',
-            'url' => 'dashboard.php?page=incidents',  // Fixed to use dashboard.php
-            'icon' => 'fas fa-exclamation-triangle',
+            // COMBINED: District-wide incidents + Resource Allocation
+            'title' => 'District Incidents',
+            'url' => 'dashboard.php?page=manage_incidents', 
+            'icon' => 'fas fa-map',
             'badge' => null
         ],
         [
-            'title' => 'Manage Reports',
-            'url' => 'dashboard.php?page=reports',
-            'icon' => 'fas fa-file-alt',
+            // "manage/generate report"
+            'title' => 'Reports & Analytics',
+            'url' => 'dashboard.php?page=manage_reports',
+            'icon' => 'fas fa-chart-bar',
             'badge' => '2'
         ],
         [
-            'title' => 'Manage Users',
+            // "emergency alert"
+            'title' => 'Broadcast Alert',
+            'url' => 'dashboard.php?page=emergency_alerts',
+            'icon' => 'fas fa-bullhorn',
+            'badge' => null
+        ],
+        [
+            // "admin (daftar user)"
+            'title' => 'User Management',
             'url' => 'dashboard.php?page=users',
-            'icon' => 'fas fa-users',
+            'icon' => 'fas fa-users-cog',
+            'badge' => null
+        ],
+    ];
+} elseif ($role === 'hq') {
+    // Default for other roles
+    $navItems = [
+        [
+            'title' => 'HQ Dashboard',
+            'url' => 'dashboard.php?page=dashboard',
+            'icon' => 'fas fa-globe-asia', // Globe icon for National level
+            'badge' => null
+        ],
+        [
+            // "national wide incident (map + details)" + Resource Allocation
+            'title' => 'National Incidents',
+            'url' => 'dashboard.php?page=manage_incidents',
+            'icon' => 'fas fa-map-marked-alt',
+            'badge' => null
+        ],
+        [
+            // "view reports and analytics"
+            'title' => 'Reports & Analytics',
+            'url' => 'dashboard.php?page=analytics', // Separate page for HQ analytics
+            'icon' => 'fas fa-chart-line',
+            'badge' => null
+        ],
+        [
+            // "send broadcast message" & "emergency alert"
+            'title' => 'Broadcast Center',
+            'url' => 'dashboard.php?page=broadcast_alerts',
+            'icon' => 'fas fa-tower-broadcast',
+            'badge' => null
+        ],
+        [
+            // "access audit logs"
+            'title' => 'System Audit Logs',
+            'url' => 'dashboard.php?page=audit_logs',
+            'icon' => 'fas fa-history',
+            'badge' => null
+        ],
+        [
+            // "full system access" -> Manage users
+            'title' => 'Users Management',
+            'url' => 'dashboard.php?page=users',
+            'icon' => 'fas fa-users-cog',
             'badge' => null
         ],
     ];
 }
+
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">

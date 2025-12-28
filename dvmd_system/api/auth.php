@@ -43,7 +43,7 @@ class Auth {
             'ketua kampung'    => 'views/ketua_kampung/dashboard.php',
             'penghulu'         => 'views/penghulu/dashboard.php',
             'district'         => 'views/district/dashboard.php',
-            'KPLB HQ'          => 'views/kplb_hq/dashboard.php'
+            'hq'          => 'views/hq/dashboard.php'
         ];
         
         return $dashboards[$role] ?? 'views/citizen/dashboard.php';
@@ -55,7 +55,7 @@ class Auth {
             'ketua kampung' => 2,
             'penghulu' => 3,
             'district' => 4,
-            'KPLB HQ' => 5
+            'hq' => 5
         ];
     }
     
@@ -77,7 +77,7 @@ class Auth {
             'ketua kampung' => 'Ketua Kampung',
             'penghulu' => 'Penghulu',
             'district' => 'District Office',
-            'KPLB HQ' => 'KPLB HQ'
+            'hq' => 'KPLB HQ'
         ];
         
         return $names[$role] ?? $role;

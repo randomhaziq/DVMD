@@ -15,11 +15,38 @@ $roleFolder = strtolower(str_replace(' ', '_', $role));
 
 // Define allowed pages
 $allowedPages = [
-    'citizen' => ['dashboard', 'reports', 'profile', 'complaints', 'sos'],
-    'ketua_kampung' => ['dashboard', 'incidents', 'reports', 'profile', 'villagers'],
-    'penghulu' => ['dashboard', 'profile', 'villages', 'reports', 'incidents'],
-    'district' => ['dashboard', 'profile', 'reports', 'analytics', 'incidents'],
-    'hq' => ['dashboard', 'profile', 'overview', 'reports', 'analytics']
+    'citizen' => [
+        'dashboard', 
+        'sos', 
+        'submit_reports',
+    ],
+    'ketua_kampung' => [ // Handles Penghulu too if folder is named this, or add 'penghulu' key
+        'dashboard', 
+        'manage_incidents', 
+        'manage_reports', 
+        'emergency_alerts', 
+    ],
+    'penghulu' => [
+        'dashboard', 
+        'manage_incidents', 
+        'manage_reports', 
+        'emergency_alerts',
+    ],
+    'district' => [
+        'dashboard', 
+        'manage_incidents', 
+        'manage_reports', 
+        'emergency_alerts', 
+        'users',
+    ],
+    'kplb_hq' => [
+        'dashboard', 
+        'manage_incidents', 
+        'analytics',        
+        'broadcast_alerts', 
+        'audit_logs',       
+        'users',
+    ]
 ];
 
 // Check if page is allowed
