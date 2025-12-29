@@ -35,16 +35,16 @@ function redirectIfNotLoggedIn() {
 }
 
 // Switch user role (for demo)
-if (isset($_GET['switch_role'])) {
-    $role = $_GET['switch_role'];
-    $users = Auth::getUsersByRole($role);
+// if (isset($_GET['switch_role'])) {
+//     $role = $_GET['switch_role'];
+//     $users = Auth::getUsersByRole($role);
     
-    if (!empty($users)) {
-        $_SESSION['user_data'] = $users[0];
-        header('Location: index.php');
-        exit();
-    }
-}
+//     if (!empty($users)) {
+//         $_SESSION['user_data'] = $users[0];
+//         header('Location: index.php');
+//         exit();
+//     }
+// }
 
 // Handle logout
 if (isset($_GET['logout'])) {

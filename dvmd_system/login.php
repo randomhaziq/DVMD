@@ -27,6 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             $_SESSION['user_data'] = $result['user'];
             $_SESSION['logged_in'] = true;
             $_SESSION['user_role'] = $result['user']['role']; // CRITICAL: Set the role!
+
+            require_once 'api/dbconnect.php';
+            logAction($result['user']['id'], $result['user']['role'], 'LOGIN', 'User logged into system');
             
             // Redirect to dashboard (router will decide which dashboard based on role)
             header('Location: dashboard.php');
