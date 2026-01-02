@@ -18,7 +18,7 @@ $allowedPages = [
     'citizen' => [
         'dashboard', 
         'sos', 
-        'submit_reports',
+        'reports',
     ],
     'ketua_kampung' => [ // Handles Penghulu too if folder is named this, or add 'penghulu' key
         'dashboard', 

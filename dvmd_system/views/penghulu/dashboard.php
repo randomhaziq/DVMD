@@ -44,7 +44,7 @@ $locations_result = mysqli_query($conn, $locations_query);
 
 <div class="welcome-message">
     <h2>Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?>!</h2>
-    <p>You are logged in as <?php echo htmlspecialchars($user['role'] ?? 'Role'); ?>.</p>
+    <p>You are logged in as Penghulu</p>
     <p>Email: <?php echo htmlspecialchars($user['email'] ?? 'N/A'); ?></p>
 </div>
 

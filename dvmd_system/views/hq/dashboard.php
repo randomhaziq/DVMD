@@ -6,7 +6,7 @@ $user = $_SESSION['user_data'] ?? null;
 <!-- JUST THE DASHBOARD CONTENT STARTS HERE -->
 <div class="welcome-message">
     <h2>Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?>!</h2>
-    <p>You are logged in as <?php echo htmlspecialchars($user['role'] ?? 'Role'); ?>.</p>
+    <p>You are logged in as KPLB HQ</p>
     <p>Email: <?php echo htmlspecialchars($user['email'] ?? 'N/A'); ?></p>
 </div>
 

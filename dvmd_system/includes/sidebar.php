@@ -24,7 +24,7 @@ if ($role === 'citizen') {
         ],
         [
             'title' => 'Report Incident',
-            'url' => 'dashboard.php?page=submit_reports',
+            'url' => 'dashboard.php?page=reports',
             'icon' => 'fas fa-flag',
             'badge' => null
         ],
