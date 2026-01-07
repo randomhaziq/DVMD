@@ -3,11 +3,11 @@
 ?>
 <!-- SOS Alert Page Styles -->
 <link rel="stylesheet" href="css/sos.css">
-<script src="js/sos.js" defer></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
 <div class="sos-page-container">
     <div class="alert-header">
-        <h2><i class="fas fa-exclamation-triangle"></i> Emergency SOS System</h2>
+        <h2>Emergency SOS System</h2>
         <p class="alert-subtitle">In case of emergency, trigger the SOS button to send your location and alert
             information to emergency responders.</p>
     </div>
@@ -73,7 +73,7 @@
                 </div>
                 <div class="sos-button-label">EMERGENCY ALERT</div>
             </button>
-        </div>
+        </div><br><br>
 
         <div class="sos-warning">
             <i class="fas fa-info-circle"></i>
@@ -166,9 +166,7 @@
         <div class="modal-body">
             <!-- STEP 1: Emergency Details Form -->
             <div id="step1">
-                <div class="alert-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
+                <div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>EMERGENCY DETAILS</h3>
                 <p class="mobile-friendly-text">Please provide details about your emergency. You'll have 5 seconds to
                     cancel after confirming.</p>
@@ -176,9 +174,9 @@
                 <div class="alert-info">
                     <div class="info-row">
                         <span class="info-label">Your Location:</span>
-                        <span class="info-value"
-                            id="locationText"><?php echo htmlspecialchars($_SESSION['user_data']['village'] ?? 'Fetching location...'); ?></span>
+                        <span class="info-value" id="locationText">Detecting live location...</span>
                     </div>
+
                     <div class="info-row">
                         <span class="info-label">Citizen:</span>
                         <span
@@ -222,9 +220,7 @@
 
             <!-- STEP 2: Confirmation with Countdown -->
             <div id="step2" style="display: none;">
-                <div class="alert-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
+                <div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>CONFIRM SOS ALERT</h3>
                 <p class="mobile-friendly-text"><strong>Alert will be sent in:</strong></p>
 
@@ -272,9 +268,7 @@
             <button class="modal-close" id="closeAlertModal">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="alert-sent-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
+            <div class="alert-sent-icon"><i class="fas fa-check-circle"></i></div>
             <h3>SOS ALERT SENT SUCCESSFULLY</h3>
             <p>Your emergency alert has been sent to authorities and emergency contacts.</p>
 
@@ -311,21 +305,21 @@
     </div>
 </div>
 
+<!-- SOS Script -->
 <script>
-// SOS functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Elements
     const sosButton = document.getElementById('sosMainButton');
     const sosModal = document.getElementById('sosModal');
     const alertSentModal = document.getElementById('alertSentModal');
-    const closeSosModal = document.getElementById('closeSosModal');
-    const cancelSos = document.getElementById('cancelSos');
-    const nextToConfirm = document.getElementById('nextToConfirm');
-    const goBack = document.getElementById('goBack');
-    const confirmSosNow = document.getElementById('confirmSosNow');
-    const closeAlertModal = document.getElementById('closeAlertModal');
+    const closeSosModalBtn = document.getElementById('closeSosModal');
+    const cancelSosBtn = document.getElementById('cancelSos');
+    const nextToConfirmBtn = document.getElementById('nextToConfirm');
+    const goBackBtn = document.getElementById('goBack');
+    const confirmSosNowBtn = document.getElementById('confirmSosNow');
+    const closeAlertModalBtn = document.getElementById('closeAlertModal');
     const closeAlertBtn = document.getElementById('closeAlertBtn');
-    const callEmergency = document.getElementById('callEmergency');
+    const callEmergencyBtn = document.getElementById('callEmergency');
     const countdownEl = document.getElementById('countdown');
     const countdownNumber = document.getElementById('countdownNumber');
     const locationText = document.getElementById('locationText');
@@ -333,21 +327,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const alertId = document.getElementById('alertId');
     const sentTime = document.getElementById('sentTime');
 
-    // Step elements
     const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const summaryType = document.getElementById('summaryType');
     const summaryLocation = document.getElementById('summaryLocation');
     const summaryInfo = document.getElementById('summaryInfo');
-
-    // Call buttons
     const callButtons = document.querySelectorAll('.contact-call-btn');
 
-    // Variables
-    let countdownInterval;
-    let countdownValue = 5;
+    let countdownInterval, countdownValue = 5;
+    let locationInterval;
 
-    // Update time in modal
+    // Helpers
     function updateTime() {
         const now = new Date();
         const timeString = now.toLocaleTimeString([], {
@@ -355,71 +345,89 @@ document.addEventListener('DOMContentLoaded', function() {
             minute: '2-digit',
             second: '2-digit'
         });
-        if (timeText) timeText.textContent = timeString;
-        if (sentTime) sentTime.textContent = timeString;
+        timeText.textContent = timeString;
+        sentTime.textContent = timeString;
     }
 
-    // Open SOS Modal (shows step 1)
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Live location
+    function updateLocation() {
+        if (!navigator.geolocation) {
+            locationText.textContent = 'Geolocation not supported';
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude.toFixed(6);
+                const lng = position.coords.longitude.toFixed(6);
+
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const address = data.display_name || `${lat}, ${lng}`;
+                        locationText.textContent = address;
+                        locationText.dataset.lat = lat;
+                        locationText.dataset.lng = lng;
+                    })
+                    .catch(() => {
+                        locationText.textContent = `${lat}, ${lng}`;
+                        locationText.dataset.lat = lat;
+                        locationText.dataset.lng = lng;
+                    });
+            },
+            function(err) {
+                switch (err.code) {
+                    case err.PERMISSION_DENIED:
+                        locationText.textContent = 'Location permission denied';
+                        break;
+                    case err.POSITION_UNAVAILABLE:
+                        locationText.textContent = 'Location unavailable';
+                        break;
+                    case err.TIMEOUT:
+                        locationText.textContent = 'Location request timed out';
+                        break;
+                    default:
+                        locationText.textContent = 'Unable to detect location';
+                }
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+
+    // Open modal
     function openSosModal() {
         sosModal.style.display = 'flex';
         step1.style.display = 'block';
         step2.style.display = 'none';
-
-        // Reset form
         document.getElementById('emergencyType').value = '';
         document.getElementById('additionalInfo').value = '';
-
-        // Update time
         updateTime();
+        updateLocation();
+        locationInterval = setInterval(updateLocation, 10000);
+
+        // Mobile scroll
+        if (isMobileDevice()) {
+            setTimeout(() => {
+                sosModal.scrollTop = 0;
+                const modalContent = document.querySelector('.modal-content');
+                if (modalContent) modalContent.scrollTop = 0;
+            }, 100);
+        }
     }
 
-    // Close SOS Modal
     function closeSosModalFunc() {
         sosModal.style.display = 'none';
         clearInterval(countdownInterval);
+        clearInterval(locationInterval);
     }
 
-    // Next to confirmation step
-    nextToConfirm.addEventListener('click', function() {
-        const emergencyType = document.getElementById('emergencyType').value;
-        const additionalInfo = document.getElementById('additionalInfo').value;
-
-        // Validate
-        if (!emergencyType) {
-            alert('Please select an emergency type.');
-            return;
-        }
-
-        // Update summary
-        const typeText = {
-            'medical': 'Medical Emergency',
-            'accident': 'Accident',
-            'crime': 'Crime in Progress',
-            'fire': 'Fire',
-            'natural': 'Natural Disaster',
-            'other': 'Other Emergency'
-        } [emergencyType] || 'Unknown';
-
-        summaryType.textContent = typeText;
-        summaryLocation.textContent = locationText.textContent;
-        summaryInfo.textContent = additionalInfo || 'None provided';
-
-        // Show step 2
-        step1.style.display = 'none';
-        step2.style.display = 'block';
-
-        // Start 5-second countdown
-        startCountdown();
-    });
-
-    // Go back to step 1
-    goBack.addEventListener('click', function() {
-        step2.style.display = 'none';
-        step1.style.display = 'block';
-        clearInterval(countdownInterval);
-    });
-
-    // Start countdown
     function startCountdown() {
         countdownValue = 5;
         countdownNumber.textContent = countdownValue;
@@ -438,150 +446,120 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
     }
 
-    // Confirm SOS now (manual send)
-    confirmSosNow.addEventListener('click', function() {
-        clearInterval(countdownInterval);
-        sendSOSAlert();
-    });
-
-    //sendSOSAlert()
     function sendSOSAlert() {
         closeSosModalFunc();
 
-        // Get form values
-        const emergencyType = document.getElementById('emergencyType').value;
-        const additionalInfo = document.getElementById('additionalInfo').value;
-        const location = document.getElementById('locationText').textContent;
-
-        // Show loading state
-        showLoading(true);
-
-        // Prepare data to send
         const alertData = {
-            type: emergencyType,
-            additional_info: additionalInfo,
-            location: location
-            // Note: user_id is handled by PHP session
+            type: document.getElementById('emergencyType').value,
+            additional_info: document.getElementById('additionalInfo').value,
+            location: locationText.textContent,
+            lat: locationText.dataset.lat || null,
+            lng: locationText.dataset.lng || null
         };
 
-        // Send to server
+        showLoading(true);
+
         fetch('api/send_sos.php', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(alertData)
             })
-            .then(response => {
-                // Check if response is OK
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(res => res.ok ? res.json() : Promise.reject(res.status))
             .then(data => {
-                console.log('Server response:', data);
-
                 if (data.success) {
-                    // Update alert ID in success modal
-                    document.getElementById('alertId').textContent = data.sos_id;
-
-                    // Show success modal
+                    alertId.textContent = data.sos_id;
                     setTimeout(() => {
                         showLoading(false);
                         alertSentModal.style.display = 'flex';
                     }, 500);
-
                 } else {
-                    // Show error message
                     showLoading(false);
                     alert('Error: ' + (data.error || 'Failed to save SOS alert'));
                 }
             })
-            .catch(error => {
-                console.error('Network error:', error);
+            .catch(err => {
+                console.error('Network error', err);
                 showLoading(false);
-
-                // Show fallback modal with temporary ID
                 const tempId = 'SOS-' + Date.now();
-                document.getElementById('alertId').textContent = tempId;
-
-                alert('Network error. Alert was created with ID: ' + tempId +
-                    '. Please contact emergency services directly if needed.');
-
+                alertId.textContent = tempId;
+                alert('Network error. Alert created with ID: ' + tempId +
+                    '. Please contact emergency services directly.');
                 setTimeout(() => {
                     alertSentModal.style.display = 'flex';
                 }, 500);
             });
     }
 
-    // Helper function to show/hide loading
     function showLoading(isLoading) {
-        const confirmBtn = document.getElementById('confirmSosNow');
-        const countdownEl = document.getElementById('countdown');
-
         if (isLoading) {
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
-            confirmBtn.disabled = true;
-            if (countdownEl) {
-                countdownEl.textContent = 'Saving alert to database...';
-            }
+            confirmSosNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
+            confirmSosNowBtn.disabled = true;
+            countdownEl.textContent = 'Saving alert to database...';
         } else {
-            confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> SEND NOW';
-            confirmBtn.disabled = false;
+            confirmSosNowBtn.innerHTML = '<i class="fas fa-paper-plane"></i> SEND NOW';
+            confirmSosNowBtn.disabled = false;
         }
     }
 
-    // Close Alert Modal
     function closeAlertModalFunc() {
         alertSentModal.style.display = 'none';
     }
 
-    // Call emergency number
     function callEmergencyFunc() {
-        alert("In a real implementation, this would call 999 (Malaysian emergency number).");
+        alert("Calling 999...");
         closeAlertModalFunc();
     }
 
-    // Call contact
-    function callContact(phoneNumber) {
-        alert(`Calling ${phoneNumber}... (In a real app, this would initiate a phone call)`);
-        // In real app: window.location.href = `tel:${phoneNumber}`;
+    function callContact(phone) {
+        alert(`Calling ${phone}...`);
     }
 
-    // Event Listeners
+    // Event listeners
     sosButton.addEventListener('click', openSosModal);
-    closeSosModal.addEventListener('click', closeSosModalFunc);
-    cancelSos.addEventListener('click', closeSosModalFunc);
-
-    closeAlertModal.addEventListener('click', closeAlertModalFunc);
+    closeSosModalBtn.addEventListener('click', closeSosModalFunc);
+    cancelSosBtn.addEventListener('click', closeSosModalFunc);
+    nextToConfirmBtn.addEventListener('click', () => {
+        const type = document.getElementById('emergencyType').value;
+        if (!type) {
+            alert('Select emergency type');
+            return;
+        }
+        summaryType.textContent = {
+            'medical': 'Medical Emergency',
+            'accident': 'Accident',
+            'crime': 'Crime in Progress',
+            'fire': 'Fire',
+            'natural': 'Natural Disaster',
+            'other': 'Other Emergency'
+        } [type] || 'Unknown';
+        summaryLocation.textContent = locationText.textContent;
+        summaryInfo.textContent = document.getElementById('additionalInfo').value || 'None provided';
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+        startCountdown();
+    });
+    goBackBtn.addEventListener('click', () => {
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+        clearInterval(countdownInterval);
+    });
+    confirmSosNowBtn.addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        sendSOSAlert();
+    });
+    closeAlertModalBtn.addEventListener('click', closeAlertModalFunc);
     closeAlertBtn.addEventListener('click', closeAlertModalFunc);
-    callEmergency.addEventListener('click', callEmergencyFunc);
-
-    // Contact call buttons
-    callButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const phoneNumber = this.getAttribute('data-phone');
-            callContact(phoneNumber);
-        });
-    });
-
-    // Close modals when clicking outside
+    callEmergencyBtn.addEventListener('click', callEmergencyFunc);
+    callButtons.forEach(btn => btn.addEventListener('click', () => callContact(btn.dataset.phone)));
     window.addEventListener('click', (e) => {
-        if (e.target === sosModal) {
-            closeSosModalFunc();
-        }
-        if (e.target === alertSentModal) {
-            closeAlertModalFunc();
-        }
+        if (e.target === sosModal) closeSosModalFunc();
+        if (e.target === alertSentModal) closeAlertModalFunc();
     });
-
-    // Update time every second
     setInterval(updateTime, 1000);
-
-    // Add keyboard shortcut for SOS (Alt+S)
-    document.addEventListener('keydown', function(e) {
-        if (e.altKey && e.key === 's' && !sosModal.style.display === 'flex') {
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && e.key === 's' && sosModal.style.display !== 'flex') {
             e.preventDefault();
             sosButton.click();
         }

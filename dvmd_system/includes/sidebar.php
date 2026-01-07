@@ -28,6 +28,12 @@ if ($role === 'citizen') {
             'icon' => 'fas fa-flag',
             'badge' => null
         ],
+        [
+            'title' => 'Profile',
+            'url' => 'dashboard.php?page=profile',
+            'icon' => 'fas fa-user',
+            'badge' => null
+        ],
     ];
 } elseif ($role === 'ketua_kampung' || $role === 'penghulu') {
     $navItems = [
@@ -105,16 +111,9 @@ if ($role === 'citizen') {
             'badge' => null
         ],
         [
-            // "view reports and analytics"
-            'title' => 'Reports & Analytics',
-            'url' => 'dashboard.php?page=analytics', // Separate page for HQ analytics
-            'icon' => 'fas fa-chart-line',
-            'badge' => null
-        ],
-        [
             // "send broadcast message" & "emergency alert"
             'title' => 'Broadcast Center',
-            'url' => 'dashboard.php?page=broadcast_alerts',
+            'url' => 'dashboard.php?page=broadcast_center',
             'icon' => 'fas fa-tower-broadcast',
             'badge' => null
         ],

@@ -19,6 +19,7 @@ $allowedPages = [
         'dashboard', 
         'sos', 
         'reports',
+        'profile',
     ],
     'ketua_kampung' => [ // Handles Penghulu too if folder is named this, or add 'penghulu' key
         'dashboard', 
@@ -41,9 +42,8 @@ $allowedPages = [
     ],
     'hq' => [
         'dashboard', 
-        'manage_incidents', 
-        'analytics',        
-        'broadcast_alerts', 
+        'manage_incidents',        
+        'broadcast_center', 
         'audit_logs',       
         'users',
     ]
@@ -64,7 +64,6 @@ $pageTitles = [
     'incidents' => 'Incident Management',
     'villagers' => 'Villager Management',
     'villages' => 'Village Management',
-    'analytics' => 'Analytics',
     'overview' => 'System Overview'
 ];
 $pageTitle = $pageTitles[$page] ?? 'Dashboard';
@@ -83,24 +82,31 @@ $_SESSION['current_page'] = $page;
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DVMD - <?php echo $pageTitle; ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/sidebar.css">
     <?php if ($page === 'reports'): ?>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="css/reports.css">
     <?php endif; ?>
+    <?php if ($page === 'profile'): ?>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/profile.css">
+    <?php endif; ?>
     <script src="js/sidebar.js" defer></script>
 </head>
+
 <body>
     <div class="wrapper">
         <?php include 'includes/sidebar.php'; ?>
-        
+
         <div class="content-wrapper">
             <header class="dashboard-header">
                 <h1><?php echo $pageTitle; ?></h1>
@@ -133,11 +139,13 @@ $_SESSION['current_page'] = $page;
                     echo "<div class='welcome-message'><h2>Page Not Found</h2><p>The requested page is not available.</p></div>";
                 }
                 ?>
-                
+
                 <!-- Footer -->
                 <div class="dashboard-footer">
-                    <p>Digital Village Management Dashboard (DVMD) • Version 2.1 • Compliant with PDPA 2010 & MyGovCloud Standards</p>
-                    <p style="font-size: 0.8rem; margin-top: 5px;">Last Updated: <?php echo date('d F Y'); ?> • System Status:
+                    <p>Digital Village Management Dashboard (DVMD) • Version 2.1 • Compliant with PDPA 2010 & MyGovCloud
+                        Standards</p>
+                    <p style="font-size: 0.8rem; margin-top: 5px;">Last Updated: <?php echo date('d F Y'); ?> • System
+                        Status:
                         <span style="color: var(--success-color);">Operational</span>
                     </p>
                 </div>
@@ -150,4 +158,5 @@ $_SESSION['current_page'] = $page;
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <?php endif; ?>
 </body>
+
 </html>

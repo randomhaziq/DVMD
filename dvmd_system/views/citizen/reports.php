@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $affected_count = (int)($_POST['affected_count'] ?? 0);
     $latitude = (float)($_POST['latitude'] ?? 0);
     $longitude = (float)($_POST['longitude'] ?? 0);
+    $address = trim($_POST['address'] ?? '');
 
     // Get user ID (or 0 if not logged in)
     $reported_by = $user['id'] ?? 0;
@@ -41,12 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 affected,
                 lat,
                 lng,
+                address,
                 severity,
                 status,
                 reported_by,
                 created_at,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ");
 
         if (!$stmt) {
@@ -54,15 +56,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Bind parameters: s = string, i = integer, d = double/float
             $stmt->bind_param(
-                "ssidsssi",
-                $category,      // string
-                $description,   // string
-                $affected_count,// integer
-                $latitude,      // double
-                $longitude,     // double
-                $severity,      // string
-                $status,        // string
-                $reported_by    // integer
+                "ssiddsssi",
+                $category,      
+                $description,   
+                $affected_count,
+                $latitude,      
+                $longitude,     
+                $address,       
+                $severity,      
+                $status,        
+                $reported_by    
             );
 
             if ($stmt->execute()) {
@@ -77,7 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!-- JUST THE FORM CONTENT STARTS HERE - NO HTML/HEAD/BODY TAGS -->
 <!-- Welcome message area -->
 <div class="welcome-message">
@@ -215,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     value="<?php echo htmlspecialchars($_POST['affected_count'] ?? '0'); ?>" required>
             </div>
 
-            <!-- 4. Location (lat, lng) -->
+            <!-- Location (lat, lng + editable address) -->
             <div class="form-group">
                 <label class="form-label">
                     <i class="fas fa-map-marker-alt"></i> Location <span class="required">*</span>
@@ -229,17 +231,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="location-display">
-                    <div class="location-field">
-                        <label>Latitude</label>
-                        <div class="location-value" id="latDisplay">Not selected</div>
-                        <input type="hidden" name="latitude" id="latitude"
-                            value="<?php echo htmlspecialchars($_POST['latitude'] ?? ''); ?>" required>
+                    <!-- Hidden latitude and longitude inputs -->
+                    <input type="hidden" name="latitude" id="latitude" required>
+                    <input type="hidden" name="longitude" id="longitude" required>
+
+                    <!-- Optional: a simple status for user feedback -->
+                    <div class="location-status" id="locationStatus">
+                        No location selected
                     </div>
                     <div class="location-field">
-                        <label>Longitude</label>
-                        <div class="location-value" id="lngDisplay">Not selected</div>
-                        <input type="hidden" name="longitude" id="longitude"
-                            value="<?php echo htmlspecialchars($_POST['longitude'] ?? ''); ?>" required>
+                        <label>Address</label>
+                        <input type="text" name="address" id="address" placeholder="Click on map to get address"
+                            value="<?php echo htmlspecialchars($_POST['address'] ?? ''); ?>">
+                        <div style="font-size: 12px; color: #666; margin-top: 3px;">
+                            You can edit the address for more detail
+                        </div>
                     </div>
                 </div>
             </div>
@@ -249,7 +255,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="button" class="btn btn-cancel" onclick="window.history.back()">
                     <i class="fas fa-times"></i> Cancel
                 </button>
-                <button type="submit" class="btn btn-submit">
+
+                <button type="submit" class="btn btn-submit"
+                    style="background: #1a5f7a !important; color: white !important;">
                     <i class="fas fa-paper-plane"></i> Submit Report
                 </button>
             </div>
@@ -282,66 +290,131 @@ document.getElementById('decreaseBtn').addEventListener('click', () => {
 });
 
 // Initialize map
-let map;
-let marker;
+let map, marker;
+const defaultLat = 4.2105,
+    defaultLng = 101.9758;
 
-// Default coordinates (Malaysia center)
-const defaultLat = 4.2105;
-const defaultLng = 101.9758;
-
-// Initialize map
 function initMap() {
-    map = L.map('map').setView([defaultLat, defaultLng], 13);
+    setTimeout(() => {
+        map = L.map('map').setView([defaultLat, defaultLng], 13);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        map.invalidateSize();
 
-    // Click handler for map
-    map.on('click', function(e) {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
+        const latInput = document.getElementById('latitude');
+        const lngInput = document.getElementById('longitude');
+        const addressInput = document.getElementById('address');
+        const locationStatus = document.getElementById('locationStatus');
 
-        // Update display
-        document.getElementById('latDisplay').textContent = lat.toFixed(6);
-        document.getElementById('lngDisplay').textContent = lng.toFixed(6);
+        function setMarker(lat, lng) {
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng]).addTo(map);
 
-        // Update hidden inputs
-        document.getElementById('latitude').value = lat;
-        document.getElementById('longitude').value = lng;
+            // 1. VISUAL FEEDBACK: Tell user we are working
+            addressInput.value = "Fetching address...";
+            locationStatus.textContent = "Locating...";
+            addressInput.disabled = true; // Prevent typing while fetching
 
-        // Remove existing marker
-        if (marker) {
-            map.removeLayer(marker);
+            // 2. FETCH: Use Backticks (`) for variables, not single quotes (')
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Nominatim API Error: " + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 3. SUCCESS: Update Input
+                    const address = data.display_name || "Address not found";
+                    
+                    marker.bindPopup('<b>Incident Location</b><br>' + address).openPopup();
+                    addressInput.value = address;
+                    locationStatus.textContent = "Location found";
+                    
+                    // Debugging log (Check F12 console if it fails)
+                    console.log("Address found:", address);
+                })
+                .catch(err => {
+                    // 4. ERROR: Handle failure gracefully
+                    console.error("Geocoding failed:", err);
+                    marker.bindPopup('<b>Incident Location</b><br>Address lookup failed').openPopup();
+                    
+                    addressInput.value = ""; // Clear it so user can type manually
+                    addressInput.placeholder = "Could not auto-load address. Please type manually.";
+                    locationStatus.textContent = "Manual entry required";
+                })
+                .finally(() => {
+                    // Re-enable input regardless of success/fail
+                    addressInput.disabled = false;
+                });
         }
 
-        // Add new marker
-        marker = L.marker([lat, lng]).addTo(map)
-            .bindPopup('Incident Location<br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6))
-            .openPopup();
-    });
+        // Click on map
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
 
-    // If there's existing location data, show marker
-    const existingLat = document.getElementById('latitude').value;
-    const existingLng = document.getElementById('longitude').value;
+            latInput.value = lat;
+            lngInput.value = lng;
+            locationStatus.textContent = "Location selected on map";
 
-    if (existingLat && existingLng) {
-        const lat = parseFloat(existingLat);
-        const lng = parseFloat(existingLng);
+            setMarker(lat, lng);
+        });
 
-        document.getElementById('latDisplay').textContent = lat.toFixed(6);
-        document.getElementById('lngDisplay').textContent = lng.toFixed(6);
+        // Existing coordinates (for editing)
+        if (latInput.value && lngInput.value) {
+            const lat = parseFloat(latInput.value);
+            const lng = parseFloat(lngInput.value);
+            locationStatus.textContent = "Location selected on map";
+            setMarker(lat, lng);
+            map.setView([lat, lng], 15);
+        }
 
-        marker = L.marker([lat, lng]).addTo(map)
-            .bindPopup('Incident Location<br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6))
-            .openPopup();
+        // Address search
+        addressInput.addEventListener('blur', function() {
+            if (this.value.trim() && (!latInput.value || !lngInput.value)) {
+                findCoordinatesFromAddress(this.value);
+            }
+        });
 
-        map.setView([lat, lng], 15);
-    }
+        function findCoordinatesFromAddress(address) {
+            if (!address.trim()) return;
+            const originalValue = addressInput.value;
+            addressInput.value = "Searching location...";
+            addressInput.disabled = true;
+
+            fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+                )
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lng = parseFloat(data[0].lon);
+                        latInput.value = lat;
+                        lngInput.value = lng;
+                        setMarker(lat, lng);
+                        map.setView([lat, lng], 15);
+                        addressInput.value = data[0].display_name || originalValue;
+                        document.getElementById('locationStatus').textContent =
+                            "Location found from address";
+                    }
+                    addressInput.disabled = false;
+                })
+                .catch(err => {
+                    console.error(err);
+                    addressInput.value = originalValue;
+                    addressInput.disabled = false;
+                });
+        }
+    }, 100);
 }
 
-// Initialize map when page loads
 document.addEventListener('DOMContentLoaded', initMap);
+
+
 
 // Form validation
 document.getElementById('incidentForm').addEventListener('submit', function(e) {
