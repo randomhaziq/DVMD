@@ -1,12 +1,15 @@
 <?php
 // views/kplb_hq/broadcast_center.php
 
-// 1. Database Connection
-$rootPath = $_SERVER['DOCUMENT_ROOT'] . '/dvmd_system';
-require_once $rootPath . '/dbconnect.php';
+// views/hq/broadcast_center.php
+
+// 1. Database Connection (Fixed Path)
+// We go up 2 levels (../../) from 'views/hq' to reach 'api/dbconnect.php'
+require_once __DIR__ . '/../../api/dbconnect.php';
 
 $msg = "";
 $msgType = "";
+// ... rest of the code ...
 
 // 2. Handle POST (Create Broadcast)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_broadcast') {
@@ -78,7 +81,6 @@ $history = $conn->query("SELECT * FROM broadcasts ORDER BY created_at DESC");
                     <select name="target" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
                         <option value="All">All Users (Public)</option>
                         <option value="District">District Officers Only</option>
-                        <option value="Raub">Residents of Raub</option>
                     </select>
                 </div>
 

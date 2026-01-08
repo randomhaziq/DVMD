@@ -29,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Please provide a description';
     } elseif (strlen($description) < 10) {
         $error = 'Description must be at least 10 characters';
-    } elseif ($affected_count < 0) {
-        $error = 'Please enter a valid number of affected people';
+    } elseif ($affected_count < 1) {
+        $error = 'Please specify at least one affected person';
     } elseif (empty($latitude) || empty($longitude)) {
         $error = 'Please select a location on the map';
     } else {

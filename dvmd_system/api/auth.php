@@ -3,12 +3,41 @@ require_once 'dbconnect.php';
 
 class Auth {
     
+    // 1. Helper function for Email Verification (Regex/Filter Check)
+    private static function validateEmailFormat($email) {
+        
+        
+        //Manual Regex
+        // This checks for basic format: text + @ + text + . + text
+        if (!preg_match("/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/", $email)) {
+            return false;
+        }
+
+        return true;
+    }
+
     public static function login($email, $password) {
         global $conn;
 
+        // --- SECURITY IMPROVEMENT 1: SANITIZATION ---
+        // Remove extra spaces from inputs
+        $email = trim($email);
+        
+        // --- SECURITY IMPROVEMENT 2: REG CHECK / VALIDATION ---
+        // Check if email format is valid before even asking the database
+        if (empty($email) || !self::validateEmailFormat($email)) {
+            return ['status' => 'error', 'message' => 'Invalid email format (missing @, .com, etc.)'];
+        }
+
+        // --- SECURITY IMPROVEMENT 3: PREPARED STATEMENTS (SQL Injection Prevention) ---
+        // Your existing code here is already secure. 
+        // The '?' placeholder ensures input is treated as data, not executable code.
         $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+        
         if (!$stmt) {
-            return ['status' => 'error', 'message' => 'Prepare failed: ' . $conn->error];
+            // Log this error internally in production, don't expose DB details to user
+            error_log('Database Prepare Failed: ' . $conn->error); 
+            return ['status' => 'error', 'message' => 'System error. Please try again later.'];
         }
 
         $stmt->bind_param("s", $email);
@@ -23,27 +52,29 @@ class Auth {
         $user = $result->fetch_assoc();
         $stmt->close();
 
+        // Verify Password
         if (!password_verify($password, $user['password'])) {
             return ['status' => 'error', 'message' => 'Invalid credentials'];
         }
 
+        // Remove sensitive data before returning
         unset($user['password']);
 
         return [
             'status' => 'success',
             'user' => $user
-            // REMOVED: 'redirect' => self::getRoleDashboard($user['role'])
         ];
     }
     
-    // Keep other methods but don't use redirectToRoleDashboard in login flow
+    // ... [Keep your existing helper methods below: getRoleDashboard, etc.] ...
+    
     public static function getRoleDashboard($role) {
         $dashboards = [
             'citizen'          => 'views/citizen/dashboard.php',
             'ketua kampung'    => 'views/ketua_kampung/dashboard.php',
             'penghulu'         => 'views/penghulu/dashboard.php',
             'district'         => 'views/district/dashboard.php',
-            'hq'          => 'views/hq/dashboard.php'
+            'hq'               => 'views/hq/dashboard.php'
         ];
         
         return $dashboards[$role] ?? 'views/citizen/dashboard.php';
@@ -64,7 +95,6 @@ class Auth {
         return $hierarchy[$userRole] >= $hierarchy[$requiredRole];
     }
     
-    // Only use this for manual redirects, not for login
     public static function redirectToRoleDashboard($role) {
         $dashboard = self::getRoleDashboard($role);
         header("Location: $dashboard");

@@ -9,10 +9,10 @@ $messageType = "";
 
 // 2. Handle Form Submissions (Add User)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_user') {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
+    $name = trim($_POST['name']);
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
-    $phone = $_POST['phone'];
+    $phone = trim($_POST['phone']);
     $role = $_POST['role'];
     $district = $_POST['district'];
     $village = $_POST['village'];
@@ -24,36 +24,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message = "Error: You are not authorized to create this role.";
         $messageType = "error";
     } else {
-        // Check if email exists
-        $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $check->bind_param("s", $email);
-        $check->execute();
-        $check->store_result();
-
-        if ($check->num_rows > 0) {
-            $message = "Error: Email already exists!";
+        // --- VALIDATION STEP ---
+        // 1. Check Phone Format
+        if (!preg_match("/^01[0-9]-[0-9]{7,8}$/", $phone)) {
+            $message = "Error: Invalid phone format! Please use 01x-xxxxxxx (e.g. 012-34567890)";
             $messageType = "error";
-        } else {
-            // Hash Password
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            // Insert User
-            $stmt = $conn->prepare("INSERT INTO users (name, email, password, phone, role, district, village) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssssss", $name, $email, $hashed_password, $phone, $role, $district, $village);
-            
-            if ($stmt->execute()) {
-                $message = "User registered successfully!";
-                $messageType = "success";
-                if (function_exists('logAction')) {
-                    logAction($_SESSION['user_id'] ?? 0, 'District', 'CREATE_USER', "Created $role: $email");
-                }
-            } else {
-                $message = "Database Error: " . $conn->error;
-                $messageType = "error";
-            }
-            $stmt->close();
         }
-        $check->close();
+        // 2. Check Password Length
+        elseif (strlen($password) < 6) {
+            $message = "Error: Password must be at least 6 characters.";
+            $messageType = "error";
+        }
+        // --- IF VALIDATION PASSES, PROCEED TO DB ---
+        else {
+            // Check if email exists
+            $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
+            $check->bind_param("s", $email);
+            $check->execute();
+            $check->store_result();
+
+            if ($check->num_rows > 0) {
+                $message = "Error: Email already exists!";
+                $messageType = "error";
+            } else {
+                // Hash Password
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+                // Insert User
+                $stmt = $conn->prepare("INSERT INTO users (name, email, password, phone, role, district, village) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssssss", $name, $email, $hashed_password, $phone, $role, $district, $village);
+                
+                if ($stmt->execute()) {
+                    $message = "User registered successfully!";
+                    $messageType = "success";
+                    if (function_exists('logAction')) {
+                        logAction($_SESSION['user_id'] ?? 0, 'District', 'CREATE_USER', "Created $role: $email");
+                    }
+                } else {
+                    $message = "Database Error: " . $conn->error;
+                    $messageType = "error";
+                }
+                $stmt->close();
+            }
+            $check->close();
+        }
     }
 }
 
@@ -62,7 +76,6 @@ if (isset($_GET['delete_id'])) {
     $id = intval($_GET['delete_id']);
     
     // Security: Check the role of the user being deleted first
-    // You shouldn't be able to delete an HQ user by accident via URL hacking
     $checkRole = $conn->query("SELECT role FROM users WHERE id = $id")->fetch_assoc();
     
     if ($checkRole && in_array($checkRole['role'], ['citizen', 'ketua_kampung', 'penghulu'])) {
@@ -86,7 +99,6 @@ if (isset($_GET['delete_id'])) {
 }
 
 // 4. Fetch Users List (FILTERED)
-// We use WHERE IN (...) to only get the specific roles allowed for District view
 $sql = "SELECT * FROM users 
         WHERE role IN ('citizen', 'ketua_kampung', 'penghulu') 
         ORDER BY created_at DESC";
@@ -94,7 +106,6 @@ $result = $conn->query($sql);
 ?>
 
 <style>
-    /* ... (Styles remain the same) ... */
     .users-container { padding: 20px; }
     .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .btn-add { background-color: #2c3e50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -150,10 +161,19 @@ $result = $conn->query($sql);
                     <label>Password</label>
                     <input type="password" name="password" class="form-control" required>
                 </div>
+                
                 <div class="form-group">
                     <label>Phone Number</label>
-                    <input type="text" name="phone" class="form-control" required>
+                    <input type="tel" 
+                           name="phone" 
+                           class="form-control" 
+                           pattern="01[0-9]-[0-9]{7,8}" 
+                           placeholder="e.g. 012-34567890" 
+                           title="Format: 01x-xxxxxxx (e.g. 012-34567890)"
+                           required>
+                    <small style="color: #666; font-size: 0.8em;">Format: 01x-xxxxxxx (Must include hyphen)</small>
                 </div>
+                
                 <div class="form-group">
                     <label>Role</label>
                     <select name="role" class="form-control" required>
@@ -188,7 +208,6 @@ $result = $conn->query($sql);
         </thead>
         <tbody>
             <?php 
-            // Counter for sequential numbering
             $counter = 1;
 
             if ($result->num_rows > 0): 

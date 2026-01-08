@@ -9,61 +9,82 @@ $messageType = "";
 
 // 2. Handle Form Submissions (Add User)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_user') {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
+    $name = trim($_POST['name']);
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
-    $phone = $_POST['phone'];
+    $phone = trim($_POST['phone']); // Trim whitespace
     
-    // HARDCODED ROLE: Only allow adding 'district'
+    // HARDCODED ROLE
     $role = 'district'; 
     $district = $_POST['district'];
-    
-    // RESTORED: Capture the village input
     $village = $_POST['village'] ?? ''; 
 
-    // Check if email exists
-    $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
-    $check->bind_param("s", $email);
-    $check->execute();
-    $check->store_result();
-
-    if ($check->num_rows > 0) {
-        $message = "Error: Email already exists!";
+    // --- VALIDATION STEP ---
+    // 1. Check Phone Format
+    // Regex: Starts with 01, then 1 digit, then hyphen, then 7-8 digits.
+    if (!preg_match("/^01[0-9]-[0-9]{7,8}$/", $phone)) {
+        $message = "Error: Invalid phone format! Please use 01x-xxxxxxx (e.g. 012-34567890)";
         $messageType = "error";
-    } else {
-        // Hash Password
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-        // Insert User
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password, phone, role, district, village) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssssss", $name, $email, $hashed_password, $phone, $role, $district, $village);
-        
-        if ($stmt->execute()) {
-            $message = "District Officer registered successfully!";
-            $messageType = "success";
-            // Log action if function exists
-            if (function_exists('logAction')) {
-                logAction($_SESSION['user_id'] ?? 0, 'KPLB HQ', 'CREATE_USER', "Created District Officer: $email");
-            }
-        } else {
-            $message = "Database Error: " . $conn->error;
-            $messageType = "error";
-        }
-        $stmt->close();
+    } 
+    // 2. Check Password Length (Optional good practice)
+    elseif (strlen($password) < 6) {
+        $message = "Error: Password must be at least 6 characters.";
+        $messageType = "error";
     }
-    $check->close();
+    // --- IF VALIDATION PASSES, PROCEED TO DB ---
+    else {
+        // Check if email exists
+        $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
+        $check->bind_param("s", $email);
+        $check->execute();
+        $check->store_result();
+
+        if ($check->num_rows > 0) {
+            $message = "Error: Email already exists!";
+            $messageType = "error";
+        } else {
+            // Hash Password
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+            // Insert User
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password, phone, role, district, village) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssssss", $name, $email, $hashed_password, $phone, $role, $district, $village);
+            
+            if ($stmt->execute()) {
+                $message = "District Officer registered successfully!";
+                $messageType = "success";
+                
+                if (function_exists('logAction')) {
+                    logAction($_SESSION['user_id'] ?? 0, 'KPLB HQ', 'CREATE_USER', "Created District Officer: $email");
+                }
+            } else {
+                $message = "Database Error: " . $conn->error;
+                $messageType = "error";
+            }
+            $stmt->close();
+        }
+        $check->close();
+    }
 }
 
 // 3. Handle Delete Request
 if (isset($_GET['delete_id'])) {
     $id = intval($_GET['delete_id']);
-    // Prevent deleting yourself
-    if ($id != ($_SESSION['user_id'] ?? 0)) {
+    
+    // Check 1: Prevent deleting yourself
+    if ($id == ($_SESSION['user_id'] ?? 0)) {
+        $message = "You cannot delete your own account!";
+        $messageType = "error";
+    } 
+    // Check 2: Perform Delete (This overwrites any old role restrictions)
+    else {
         $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
         $stmt->bind_param("i", $id);
+        
         if ($stmt->execute()) {
             $message = "User deleted successfully.";
             $messageType = "success";
+            
             if (function_exists('logAction')) {
                 logAction($_SESSION['user_id'] ?? 0, 'KPLB HQ', 'DELETE_USER', "Deleted user ID: $id");
             }
@@ -72,20 +93,15 @@ if (isset($_GET['delete_id'])) {
             $messageType = "error";
         }
         $stmt->close();
-    } else {
-        $message = "You cannot delete your own account!";
-        $messageType = "error";
     }
 }
 
 // 4. Fetch ONLY District Officers
-// Filter query to only show role = 'district'
 $sql = "SELECT * FROM users WHERE role = 'district' ORDER BY created_at DESC";
 $result = $conn->query($sql);
 ?>
 
 <style>
-    /* ... (Styles kept consistent) ... */
     .users-container { padding: 20px; }
     .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .btn-add { background-color: #2c3e50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -139,9 +155,17 @@ $result = $conn->query($sql);
                     <label>Password</label>
                     <input type="password" name="password" class="form-control" required>
                 </div>
+                
                 <div class="form-group">
                     <label>Phone Number</label>
-                    <input type="text" name="phone" class="form-control" required>
+                    <input type="tel" 
+                           name="phone" 
+                           class="form-control" 
+                           pattern="01[0-9]-[0-9]{7,8}" 
+                           placeholder="e.g. 012-34567890" 
+                           title="Format: 01x-xxxxxxx (e.g. 012-34567890)"
+                           required>
+                    <small style="color: #666; font-size: 0.8em;">Format: 01x-xxxxxxx (Must include hyphen)</small>
                 </div>
                 
                 <div class="form-group">

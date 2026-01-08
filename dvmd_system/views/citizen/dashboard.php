@@ -6,6 +6,24 @@ $user_id = $user['id'] ?? 0;
 // Direct database connection
 require_once __DIR__ . '/../../api/dbconnect.php';
 
+// ---------------------------------------------------------
+// 1. FETCH BROADCAST MESSAGES (NEW)
+// ---------------------------------------------------------
+$notices = [];
+// Select latest 3 broadcasts. You can add "WHERE target_audience = 'All'" if needed later.
+$notice_sql = "SELECT * FROM broadcasts ORDER BY created_at DESC LIMIT 3";
+$notice_result = mysqli_query($conn, $notice_sql);
+
+if ($notice_result) {
+    while ($row = mysqli_fetch_assoc($notice_result)) {
+        $notices[] = $row;
+    }
+}
+
+// ---------------------------------------------------------
+// 2. EXISTING QUERIES
+// ---------------------------------------------------------
+
 // Fetch SOS alerts FOR THIS SPECIFIC USER ONLY
 $sos_query = "SELECT 
     COUNT(*) as total_count,
@@ -76,10 +94,8 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
 }
 ?>
 
-<!-- Load Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<!-- CITIZEN DASHBOARD SPECIFIC STYLES -->
 <style>
 /* Citizen Dashboard Specific Styles */
 :root {
@@ -353,6 +369,48 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
     background: var(--light-gray);
     overflow: hidden !important;
     position: relative;
+    z-index: 0;
+}
+
+/* --- NEW: NOTICES SECTION STYLE --- */
+.notices-section {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+    border-left: 5px solid var(--warning-orange);
+}
+
+.notice-item {
+    padding: 15px;
+    background: #fff8e1; /* Light yellow bg for alerts */
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ffe0b2;
+}
+
+.notice-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.notice-title {
+    font-weight: 700;
+    color: #d35400;
+    font-size: 1rem;
+}
+
+.notice-date {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.notice-body {
+    color: #333;
+    font-size: 0.95rem;
+    line-height: 1.5;
 }
 
 /* Recent Incidents */
@@ -526,9 +584,6 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
 }
 </style>
 
-<!-- JUST THE DASHBOARD CONTENT STARTS HERE -->
-
-<!-- Welcome Section -->
 <div class="welcome-section">
     <h2>Welcome back, <?php echo htmlspecialchars($user['name'] ?? 'Citizen'); ?>!</h2>
     <p>You are logged in as <strong>Citizen</strong> | Email: <?php echo htmlspecialchars($user['email'] ?? 'N/A'); ?></p>
@@ -537,9 +592,7 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
     </p>
 </div>
 
-<!-- Quick Stats Dashboard Grid - 3 CARDS ONLY -->
 <div class="dashboard-grid">
-    <!-- Card 1: Your SOS Alerts -->
     <div class="quick-stat-card emergency">
         <div class="card-header">
             <h3 class="card-title">YOUR SOS ALERTS</h3>
@@ -568,7 +621,6 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
         </div>
     </div>
 
-    <!-- Card 2: Your Incident Reports -->
     <div class="quick-stat-card info">
         <div class="card-header">
             <h3 class="card-title">YOUR INCIDENT REPORTS</h3>
@@ -600,7 +652,6 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
         </div>
     </div>
 
-    <!-- Card 3: Weather/Risk Monitor -->
     <div class="quick-stat-card teal">
         <div class="card-header">
             <h3 class="card-title">WEATHER & RISK</h3>
@@ -627,7 +678,6 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
     </div>
 </div>
 
-<!-- Live Incident Map Section (PUBLIC - All incidents) -->
 <div class="map-section">
     <div class="section-header">
         <h3 class="section-title">
@@ -638,7 +688,6 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
         </a>
     </div>
     
-    <!-- Map Container -->
     <div id="citizenMap"></div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
@@ -666,7 +715,33 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
     </div>
 </div>
 
-<!-- Recent Incidents Section (USER-SPECIFIC) -->
+<?php if (!empty($notices)): ?>
+<div class="notices-section">
+    <div class="section-header" style="border-bottom: 2px solid #f39c12;">
+        <h3 class="section-title" style="color: #d35400;">
+            <i class="fas fa-bullhorn"></i> COMMUNITY NOTICES & EVENTS
+        </h3>
+    </div>
+    
+    <div class="notices-list">
+        <?php foreach ($notices as $notice): ?>
+        <div class="notice-item">
+            <div class="notice-header">
+                <span class="notice-title">
+                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($notice['title']); ?>
+                </span>
+                <span class="notice-date">
+                    <?php echo date('d M Y, h:i A', strtotime($notice['created_at'])); ?>
+                </span>
+            </div>
+            <div class="notice-body">
+                <?php echo nl2br(htmlspecialchars($notice['message'])); ?>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 <div class="recent-incidents">
     <div class="section-header">
         <h3 class="section-title">
@@ -774,7 +849,6 @@ while ($row = mysqli_fetch_assoc($locations_result)) {
     <?php endif; ?>
 </div>
 
-<!-- Load Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -852,4 +926,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-<!-- END OF CONTENT - NO CLOSING HTML/BODY TAGS -->
